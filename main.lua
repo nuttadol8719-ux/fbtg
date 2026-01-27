@@ -1,5 +1,5 @@
 --====================================
--- AUTO SKILL FARM (CLEAN + NO DUP + SMART REFRESH)
+-- AUTO SKILL FARM (FIXED / DELTA READY)
 -- fruits battleground | by pond
 --====================================
 
@@ -27,14 +27,14 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local VirtualUser = game:GetService("VirtualUser")
 
 local lp = Players.LocalPlayer
+local RepNoYield = ReplicatedStorage:WaitForChild("ReplicatorNoYield")
+local Replicator = ReplicatedStorage:WaitForChild("Replicator")
 
 --====================================
 -- VARIABLES
 --====================================
 local SkillRemotes = {}
 local ActiveSkills = {}
-
-local SkillCache  = {}
 local ToggleCache = {}
 
 local Auto = false
@@ -46,13 +46,11 @@ local AntiAFK = false
 
 local ReturnCF = nil
 local MaxDist = 5
-
 local Conns = {}
 
 -- AUTO SPIN
 local AutoSpin = false
 local SpinDelay = 1.5
-local Replicator = ReplicatedStorage:WaitForChild("Replicator")
 
 --====================================
 -- UTILS
@@ -74,10 +72,10 @@ local function ApplyNoclip()
 end
 
 --====================================
--- HOOK SKILL (NO DUP)
+-- 🔥 HOOK SKILL (ReplicatorNoYield)
 --====================================
-if not _G.SkillHooked then
-    _G.SkillHooked = true
+if not _G.FB_SKILL_HOOK then
+    _G.FB_SKILL_HOOK = true
 
     local mt = getrawmetatable(game)
     setreadonly(mt,false)
@@ -85,31 +83,28 @@ if not _G.SkillHooked then
 
     mt.__namecall = newcclosure(function(self,...)
         local args = {...}
-        if getnamecallmethod()=="InvokeServer"
-        and self==Replicator
-        and typeof(args[1])=="string"
-        and typeof(args[2])=="string"
-        and typeof(args[3])=="table" then
+
+        if self == RepNoYield
+        and getnamecallmethod() == "FireServer"
+        and typeof(args[1]) == "string"
+        and typeof(args[2]) == "string" then
 
             local fruit = args[1]
             local skill = args[2]
+            local key = fruit.." | "..skill
 
-            if skill=="SetSafeZone" or skill=="Block" then
-                return old(self,...)
-            end
-
-            local key = fruit.."|"..skill
-            if not SkillCache[key] then
-                SkillCache[key] = true
-
-                SkillRemotes[skill] = {
+            if not SkillRemotes[key] then
+                SkillRemotes[key] = {
                     Remote = self,
                     Args   = table.clone(args),
-                    Fruit  = fruit
+                    Fruit  = fruit,
+                    Skill  = skill
                 }
-                ActiveSkills[skill] = false
+                ActiveSkills[key] = false
+                warn("✅ Learn Skill:", key)
             end
         end
+
         return old(self,...)
     end)
 end
@@ -126,21 +121,21 @@ lp.CharacterAdded:Connect(function()
 end)
 
 --====================================
--- UI (หลัก)
+-- UI
 --====================================
 local Status = Tab:CreateLabel("Status: Idle")
 
 Tab:CreateButton({
     Name = "🔄 รีเฟรชสกิว",
     Callback = function()
-        for skill,data in pairs(SkillRemotes) do
-            if not ToggleCache[skill] then
-                ToggleCache[skill] = true
+        for key,data in pairs(SkillRemotes) do
+            if not ToggleCache[key] then
+                ToggleCache[key] = true
                 Tab:CreateToggle({
-                    Name = data.Fruit.." | "..skill,
+                    Name = key,
                     CurrentValue = false,
                     Callback = function(v)
-                        ActiveSkills[skill] = v
+                        ActiveSkills[key] = v
                     end
                 })
             end
@@ -162,13 +157,16 @@ Tab:CreateToggle({
     Callback=function(v)
         Auto=v
         Status:Set("Status: "..(v and "Auto Farming" or "Idle"))
+
         if v then
             task.spawn(function()
                 while Auto do
-                    for s,en in pairs(ActiveSkills) do
-                        if en and SkillRemotes[s] then
+                    for key,en in pairs(ActiveSkills) do
+                        if en and SkillRemotes[key] then
                             pcall(function()
-                                SkillRemotes[s].Remote:InvokeServer(unpack(SkillRemotes[s].Args))
+                                SkillRemotes[key].Remote:FireServer(
+                                    unpack(SkillRemotes[key].Args)
+                                )
                             end)
                         end
                     end
@@ -255,7 +253,7 @@ Tab:CreateSlider({
 })
 
 --====================================
--- 🔹 TELEPORT TAB (วาปทันที)
+-- TELEPORT TAB
 --====================================
 local TeleportTab = Window:CreateTab("วาป", 4483362458)
 
