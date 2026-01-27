@@ -25,6 +25,7 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local VirtualUser = game:GetService("VirtualUser")
+
 local lp = Players.LocalPlayer
 
 --====================================
@@ -35,7 +36,6 @@ local ActiveSkills = {}
 
 local SkillCache  = {}
 local ToggleCache = {}
-local Toggles = {}
 
 local Auto = false
 local Delay = 0.5
@@ -49,7 +49,7 @@ local MaxDist = 5
 
 local Conns = {}
 
--- 🔥 AUTO SPIN (INVOKE)
+-- AUTO SPIN
 local AutoSpin = false
 local SpinDelay = 1.5
 local Replicator = ReplicatedStorage:WaitForChild("Replicator")
@@ -61,6 +61,10 @@ local function Char()
     return lp.Character or lp.CharacterAdded:Wait()
 end
 
+local function HRP()
+    return Char():WaitForChild("HumanoidRootPart")
+end
+
 local function ApplyNoclip()
     for _,v in pairs(Char():GetDescendants()) do
         if v:IsA("BasePart") then
@@ -70,7 +74,7 @@ local function ApplyNoclip()
 end
 
 --====================================
--- HOOK SKILL (ONCE + NO DUP)
+-- HOOK SKILL (NO DUP)
 --====================================
 if not _G.SkillHooked then
     _G.SkillHooked = true
@@ -103,8 +107,7 @@ if not _G.SkillHooked then
                     Args   = table.clone(args),
                     Fruit  = fruit
                 }
-                ActiveSkills[skill] = ActiveSkills[skill] or false
-                warn("📌 Add Skill:", key)
+                ActiveSkills[skill] = false
             end
         end
         return old(self,...)
@@ -118,12 +121,12 @@ lp.CharacterAdded:Connect(function()
     task.wait(0.3)
     if Noclip then ApplyNoclip() end
     if ReturnPos and ReturnCF then
-        Char():SetPrimaryPartCFrame(ReturnCF)
+        HRP().CFrame = ReturnCF
     end
 end)
 
 --====================================
--- UI
+-- UI (หลัก)
 --====================================
 local Status = Tab:CreateLabel("Status: Idle")
 
@@ -133,10 +136,9 @@ Tab:CreateButton({
         for skill,data in pairs(SkillRemotes) do
             if not ToggleCache[skill] then
                 ToggleCache[skill] = true
-
                 Tab:CreateToggle({
                     Name = data.Fruit.." | "..skill,
-                    CurrentValue = ActiveSkills[skill],
+                    CurrentValue = false,
                     Callback = function(v)
                         ActiveSkills[skill] = v
                     end
@@ -177,25 +179,15 @@ Tab:CreateToggle({
     end
 })
 
---====================================
--- 🎰 AUTO SPIN (INVOKE SERVER)
--- อยู่เหนือปุ่ม "เดินทะลุ"
---====================================
+-- AUTO SPIN
 Tab:CreateToggle({
     Name = "🎰 ออโต้สุ่มผล",
-    CurrentValue = false,
     Callback = function(v)
         AutoSpin = v
         if v then
             task.spawn(function()
                 while AutoSpin do
-                    pcall(function()
-                        Replicator:InvokeServer(
-                            "FruitsHandler",
-                            "Spin",
-                            {}
-                        )
-                    end)
+                    Replicator:InvokeServer("FruitsHandler","Spin",{})
                     task.wait(SpinDelay)
                 end
             end)
@@ -204,19 +196,14 @@ Tab:CreateToggle({
 })
 
 Tab:CreateSlider({
-    Name = "คูลดาวน์สุ่ม",
-    Range = {0.5,5},
-    Increment = 0.1,
-    Suffix = "sec",
-    CurrentValue = 1.5,
-    Callback = function(v)
-        SpinDelay = v
-    end
+    Name="คูลดาวน์สุ่ม",
+    Range={0.5,5},
+    Increment=0.1,
+    Suffix="sec",
+    CurrentValue=1.5,
+    Callback=function(v) SpinDelay=v end
 })
 
---====================================
--- REMAIN ORIGINAL
---====================================
 Tab:CreateToggle({
     Name="กัน AFK",
     Callback=function(v)
@@ -248,12 +235,10 @@ Tab:CreateToggle({
         ReturnPos=v
         if Conns.Return then Conns.Return:Disconnect() end
         if v then
-            local c = Char()
-            if c.PrimaryPart then ReturnCF = c.PrimaryPart.CFrame end
+            ReturnCF = HRP().CFrame
             Conns.Return = RunService.Heartbeat:Connect(function()
-                local p = lp.Character and lp.Character.PrimaryPart
-                if p and ReturnCF and (p.Position-ReturnCF.Position).Magnitude > MaxDist then
-                    p.CFrame = ReturnCF
+                if (HRP().Position-ReturnCF.Position).Magnitude > MaxDist then
+                    HRP().CFrame = ReturnCF
                 end
             end)
         end
@@ -267,6 +252,25 @@ Tab:CreateSlider({
     Suffix="stud",
     CurrentValue=5,
     Callback=function(v) MaxDist=v end
+})
+
+--====================================
+-- 🔹 TELEPORT TAB (วาปทันที)
+--====================================
+local TeleportTab = Window:CreateTab("วาป", 4483362458)
+
+TeleportTab:CreateButton({
+    Name = "📍 วาปตำแหน่งที่ 1",
+    Callback = function()
+        HRP().CFrame = CFrame.new(-1348, 696, -1027)
+    end
+})
+
+TeleportTab:CreateButton({
+    Name = "📍 วาปตำแหน่งที่ 2",
+    Callback = function()
+        HRP().CFrame = CFrame.new(1395, 733, -693)
+    end
 })
 
 --====================================
