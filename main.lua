@@ -6,8 +6,8 @@
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
 
 local Window = Rayfield:CreateWindow({
-    Name = "fruits battleground update1.1",
-    LoadingTitle = "Auto Skill",
+    Name = "fruits battleground update1.15(fix)",
+    LoadingTitle = "update",
     LoadingSubtitle = "by pond",
     ConfigurationSaving = {
         Enabled = true,
@@ -25,6 +25,7 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local VirtualUser = game:GetService("VirtualUser")
+local UIS = game:GetService("UserInputService")
 
 local lp = Players.LocalPlayer
 local Replicator = ReplicatedStorage:WaitForChild("Replicator")
@@ -47,11 +48,9 @@ local MaxDist = 5
 
 local Conns = {}
 
--- Anti Idle 20 min
 local AntiIdle20 = false
 local IdleThread
 
--- Auto Spin
 local AutoSpin = false
 local SpinDelay = 1.5
 
@@ -75,8 +74,17 @@ local function ApplyNoclip()
 end
 
 --====================================
--- 🔥 HOOK ALL SKILLS (Invoke + Fire)
+-- 🔥 HOOK ALL SKILLS
 --====================================
+local BlacklistRemote = {
+    ["Main | LoadCharacter"] = true,
+    ["Core | LoadCharacter"] = true,
+    ["Core | SetSafeZone"] = true,
+    ["Core | Soru"] = true,
+    ["Core | GetInputData"] = true,
+    ["ServerManager | GetServers"] = true,
+}
+
 if not _G.FB_ALL_HOOK then
     _G.FB_ALL_HOOK = true
 
@@ -93,18 +101,17 @@ if not _G.FB_ALL_HOOK then
         and typeof(args[1]) == "string"
         and typeof(args[2]) == "string" then
 
-            local fruit = args[1]
-            local skill = args[2]
-            local key = fruit.." | "..skill
+            local key = args[1].." | "..args[2]
 
-            if not SkillRemotes[key] then
-                SkillRemotes[key] = {
-                    Remote = self,
-                    Method = method,
-                    Args   = table.clone(args)
-                }
-                ActiveSkills[key] = false
-                warn("✅ Learn Skill:", key)
+            if not BlacklistRemote[key] then
+                if not SkillRemotes[key] then
+                    SkillRemotes[key] = {
+                        Remote = self,
+                        Method = method,
+                        Args   = table.clone(args)
+                    }
+                    ActiveSkills[key] = false
+                end
             end
         end
 
@@ -131,7 +138,7 @@ local Status = Tab:CreateLabel("Status: Idle")
 Tab:CreateButton({
     Name = "🔄 รีเฟรชสกิว",
     Callback = function()
-        for key,data in pairs(SkillRemotes) do
+        for key in pairs(SkillRemotes) do
             if not ToggleCache[key] then
                 ToggleCache[key] = true
                 Tab:CreateToggle({
@@ -184,25 +191,19 @@ Tab:CreateToggle({
 })
 
 --====================================
--- 🛡️ ANTI IDLE 20 MIN
+-- ANTI IDLE
 --====================================
 Tab:CreateToggle({
     Name = "🛡️ กันหลุด 20 นาที",
     Callback = function(v)
         AntiIdle20 = v
-        if IdleThread then
-            task.cancel(IdleThread)
-            IdleThread = nil
-        end
-
+        if IdleThread then task.cancel(IdleThread) end
         if v then
             IdleThread = task.spawn(function()
                 while AntiIdle20 do
-                    task.wait(600) -- 10 นาที
-                    pcall(function()
-                        VirtualUser:CaptureController()
-                        VirtualUser:ClickButton2(Vector2.new())
-                    end)
+                    task.wait(600)
+                    VirtualUser:CaptureController()
+                    VirtualUser:ClickButton2(Vector2.new())
                 end
             end)
         end
@@ -291,6 +292,93 @@ TeleportTab:CreateButton({
     Name = "📍 วาปตำแหน่งที่ 2",
     Callback = function()
         HRP().CFrame = CFrame.new(1395, 733, -693)
+    end
+})
+
+--====================================
+-- ✅ SORU UI (กดปุ่มในแท็บวาปเพื่อรัน)
+--====================================
+TeleportTab:CreateButton({
+    Name = "⚡ เปิด SORU (ลาก + กดค้าง)",
+    Callback = function()
+
+        if lp.PlayerGui:FindFirstChild("SoruDragUI") then return end
+
+        local gui = Instance.new("ScreenGui", lp.PlayerGui)
+        gui.Name = "SoruDragUI"
+        gui.ResetOnSpawn = false
+
+        local main = Instance.new("Frame", gui)
+        main.Size = UDim2.fromOffset(160,70)
+        main.Position = UDim2.fromScale(0.5,0.8)
+        main.AnchorPoint = Vector2.new(0.5,0.5)
+        main.BackgroundColor3 = Color3.fromRGB(30,30,30)
+        main.Active = true
+
+        Instance.new("UICorner", main).CornerRadius = UDim.new(0,12)
+
+        local drag = Instance.new("Frame", main)
+        drag.Size = UDim2.new(1,0,0,22)
+        drag.BackgroundColor3 = Color3.fromRGB(45,45,45)
+        drag.Active = true
+        Instance.new("UICorner", drag).CornerRadius = UDim.new(0,12)
+
+        local txt = Instance.new("TextLabel", drag)
+        txt.Size = UDim2.fromScale(1,1)
+        txt.BackgroundTransparency = 1
+        txt.Text = "≡ DRAG"
+        txt.TextScaled = true
+        txt.TextColor3 = Color3.fromRGB(200,200,200)
+        txt.Font = Enum.Font.GothamBold
+
+        local btn = Instance.new("TextButton", main)
+        btn.Size = UDim2.new(1,-10,0,38)
+        btn.Position = UDim2.new(0,5,0,27)
+        btn.Text = "⚡ S O R U"
+        btn.TextScaled = true
+        btn.Font = Enum.Font.GothamBold
+        btn.BackgroundColor3 = Color3.fromRGB(60,60,60)
+        Instance.new("UICorner", btn).CornerRadius = UDim.new(0,10)
+
+        local dragging, holding, start, pos = false,false,nil,nil
+
+        drag.InputBegan:Connect(function(i)
+            if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+                dragging = true
+                start = i.Position
+                pos = main.Position
+            end
+        end)
+
+        drag.InputEnded:Connect(function()
+            dragging = false
+        end)
+
+        UIS.InputChanged:Connect(function(i)
+            if dragging then
+                local d = i.Position - start
+                main.Position = UDim2.new(pos.X.Scale,pos.X.Offset+d.X,pos.Y.Scale,pos.Y.Offset+d.Y)
+            end
+        end)
+
+        btn.InputBegan:Connect(function(i)
+            if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+                holding = true
+            end
+        end)
+
+        btn.InputEnded:Connect(function()
+            holding = false
+        end)
+
+        task.spawn(function()
+            while gui.Parent do
+                if holding then
+                    RepNoYield:FireServer("Core","Soru",{})
+                end
+                task.wait()
+            end
+        end)
     end
 })
 
