@@ -6,8 +6,8 @@
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
 
 local Window = Rayfield:CreateWindow({
-    Name = "fruits battleground",
-    LoadingTitle = "Auto Skill",
+    Name = "fruits battleground update1.1",
+    LoadingTitle = "Auto skill",
     LoadingSubtitle = "by pond",
     ConfigurationSaving = {
         Enabled = true,
