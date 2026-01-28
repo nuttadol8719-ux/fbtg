@@ -1,5 +1,5 @@
 --====================================
--- AUTO SKILL FARM (FIXED / DELTA READY)
+-- AUTO SKILL FARM (FULL FIX / DELTA READY)
 -- fruits battleground | by pond
 --====================================
 
@@ -27,8 +27,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local VirtualUser = game:GetService("VirtualUser")
 
 local lp = Players.LocalPlayer
-local RepNoYield = ReplicatedStorage:WaitForChild("ReplicatorNoYield")
 local Replicator = ReplicatedStorage:WaitForChild("Replicator")
+local RepNoYield = ReplicatedStorage:WaitForChild("ReplicatorNoYield")
 
 --====================================
 -- VARIABLES
@@ -42,13 +42,16 @@ local Delay = 0.5
 
 local Noclip = false
 local ReturnPos = false
-local AntiAFK = false
-
-local ReturnCF = nil
+local ReturnCF
 local MaxDist = 5
+
 local Conns = {}
 
--- AUTO SPIN
+-- Anti Idle 20 min
+local AntiIdle20 = false
+local IdleThread
+
+-- Auto Spin
 local AutoSpin = false
 local SpinDelay = 1.5
 
@@ -72,10 +75,10 @@ local function ApplyNoclip()
 end
 
 --====================================
--- 🔥 HOOK SKILL (ReplicatorNoYield)
+-- 🔥 HOOK ALL SKILLS (Invoke + Fire)
 --====================================
-if not _G.FB_SKILL_HOOK then
-    _G.FB_SKILL_HOOK = true
+if not _G.FB_ALL_HOOK then
+    _G.FB_ALL_HOOK = true
 
     local mt = getrawmetatable(game)
     setreadonly(mt,false)
@@ -83,9 +86,10 @@ if not _G.FB_SKILL_HOOK then
 
     mt.__namecall = newcclosure(function(self,...)
         local args = {...}
+        local method = getnamecallmethod()
 
-        if self == RepNoYield
-        and getnamecallmethod() == "FireServer"
+        if (self == Replicator or self == RepNoYield)
+        and (method == "InvokeServer" or method == "FireServer")
         and typeof(args[1]) == "string"
         and typeof(args[2]) == "string" then
 
@@ -96,9 +100,8 @@ if not _G.FB_SKILL_HOOK then
             if not SkillRemotes[key] then
                 SkillRemotes[key] = {
                     Remote = self,
-                    Args   = table.clone(args),
-                    Fruit  = fruit,
-                    Skill  = skill
+                    Method = method,
+                    Args   = table.clone(args)
                 }
                 ActiveSkills[key] = false
                 warn("✅ Learn Skill:", key)
@@ -163,10 +166,13 @@ Tab:CreateToggle({
                 while Auto do
                     for key,en in pairs(ActiveSkills) do
                         if en and SkillRemotes[key] then
+                            local d = SkillRemotes[key]
                             pcall(function()
-                                SkillRemotes[key].Remote:FireServer(
-                                    unpack(SkillRemotes[key].Args)
-                                )
+                                if d.Method == "InvokeServer" then
+                                    d.Remote:InvokeServer(unpack(d.Args))
+                                else
+                                    d.Remote:FireServer(unpack(d.Args))
+                                end
                             end)
                         end
                     end
@@ -177,7 +183,35 @@ Tab:CreateToggle({
     end
 })
 
+--====================================
+-- 🛡️ ANTI IDLE 20 MIN
+--====================================
+Tab:CreateToggle({
+    Name = "🛡️ กันหลุด 20 นาที",
+    Callback = function(v)
+        AntiIdle20 = v
+        if IdleThread then
+            task.cancel(IdleThread)
+            IdleThread = nil
+        end
+
+        if v then
+            IdleThread = task.spawn(function()
+                while AntiIdle20 do
+                    task.wait(600) -- 10 นาที
+                    pcall(function()
+                        VirtualUser:CaptureController()
+                        VirtualUser:ClickButton2(Vector2.new())
+                    end)
+                end
+            end)
+        end
+    end
+})
+
+--====================================
 -- AUTO SPIN
+--====================================
 Tab:CreateToggle({
     Name = "🎰 ออโต้สุ่มผล",
     Callback = function(v)
@@ -202,20 +236,9 @@ Tab:CreateSlider({
     Callback=function(v) SpinDelay=v end
 })
 
-Tab:CreateToggle({
-    Name="กัน AFK",
-    Callback=function(v)
-        AntiAFK=v
-        if Conns.AFK then Conns.AFK:Disconnect() end
-        if v then
-            Conns.AFK = RunService.Heartbeat:Connect(function()
-                VirtualUser:CaptureController()
-                VirtualUser:ClickButton2(Vector2.new())
-            end)
-        end
-    end
-})
-
+--====================================
+-- MOVEMENT
+--====================================
 Tab:CreateToggle({
     Name="เดินทะลุ",
     Callback=function(v)
@@ -253,7 +276,7 @@ Tab:CreateSlider({
 })
 
 --====================================
--- TELEPORT TAB
+-- TELEPORT
 --====================================
 local TeleportTab = Window:CreateTab("วาป", 4483362458)
 
