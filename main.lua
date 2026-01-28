@@ -194,7 +194,7 @@ Tab:CreateToggle({
 -- ANTI IDLE
 --====================================
 Tab:CreateToggle({
-    Name = "🛡️ กันหลุด 20 นาที",
+    Name = "🛡️ กันหลุดAFK",
     Callback = function(v)
         AntiIdle20 = v
         if IdleThread then task.cancel(IdleThread) end
