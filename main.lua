@@ -1,3 +1,4 @@
+
 --====================================
 -- AUTO SKILL FARM (FULL FIX / DELTA READY)
 -- fruits battleground | by pond
@@ -6,7 +7,7 @@
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
 
 local Window = Rayfield:CreateWindow({
-    Name = "fruits battleground update1.15(fix)",
+    Name = "fruits battleground update1.25",
     LoadingTitle = "update",
     LoadingSubtitle = "by pond",
     ConfigurationSaving = {
@@ -214,7 +215,7 @@ Tab:CreateToggle({
 -- AUTO SPIN
 --====================================
 Tab:CreateToggle({
-    Name = "🎰 ออโต้สุ่มผล  อย่าเพิ่งใช้",
+    Name = "🎰 ออโต้สุ่มผล  (อย่าเพิ่งใช้)",
     Callback = function(v)
         AutoSpin = v
         if v then
@@ -238,15 +239,114 @@ Tab:CreateSlider({
 })
 
 --====================================
--- MOVEMENT
+-- RETURN POSITION SYSTEM (SAFE)
+--====================================
+local ReturnEnabled = false
+local ReturnCF = nil
+local MaxDist = 5
+local Conns = {}
+
+local function HRP()
+    local ch = game.Players.LocalPlayer.Character
+    return ch and ch:FindFirstChild("HumanoidRootPart")
+end
+
+local function StartReturnLock()
+    if Conns.Return or not HRP() then return end
+    ReturnCF = HRP().CFrame
+
+    Conns.Return = game:GetService("RunService").Heartbeat:Connect(function()
+        if not ReturnEnabled or not HRP() or not ReturnCF then return end
+        if (HRP().Position - ReturnCF.Position).Magnitude > MaxDist then
+            HRP().CFrame = ReturnCF
+        end
+    end)
+end
+
+local function StopReturnLock()
+    if Conns.Return then
+        Conns.Return:Disconnect()
+        Conns.Return = nil
+    end
+end
+
+--====================================
+-- AUTO EVADE PLAYER (FIXED + STABLE)
+--====================================
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local lp = Players.LocalPlayer
+
+local DetectDistance = 250
+local SafeDistance   = 280
+local EscapeCF       = CFrame.new(1395, 733, -693)
+
+local EvadeToggle = false
+local IsEvading = false
+local AnchorCF = nil
+
+local function NearestDistanceFrom(pos)
+    local min = math.huge
+    for _,plr in ipairs(Players:GetPlayers()) do
+        if plr ~= lp then
+            local hrp = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
+            local hum = plr.Character and plr.Character:FindFirstChild("Humanoid")
+            if hrp and hum and hum.Health > 0 then
+                min = math.min(min, (hrp.Position - pos).Magnitude)
+            end
+        end
+    end
+    return min
+end
+
+local function Teleport(cf)
+    local hrp = HRP()
+    if not hrp then return end
+    hrp.Anchored = true
+    task.wait()
+    hrp.CFrame = cf
+    task.wait()
+    hrp.Anchored = false
+end
+
+RunService.Heartbeat:Connect(function()
+    if not EvadeToggle or not HRP() then return end
+
+    if not IsEvading then
+        if NearestDistanceFrom(HRP().Position) <= DetectDistance then
+            AnchorCF = HRP().CFrame
+            IsEvading = true
+
+            StopReturnLock()      -- 🔴 ปิดกันเคลื่อนที่
+            Teleport(EscapeCF)
+        end
+        return
+    end
+
+    if NearestDistanceFrom(AnchorCF.Position) > SafeDistance then
+        IsEvading = false
+        Teleport(AnchorCF)
+        if ReturnEnabled then
+            StartReturnLock()   -- 🟢 เปิดกลับ
+        end
+        AnchorCF = nil
+    end
+end)
+
+--====================================
+-- UI
 --====================================
 Tab:CreateToggle({
-    Name="เดินทะลุ",
-    Callback=function(v)
-        Noclip=v
-        if Conns.Noclip then Conns.Noclip:Disconnect() end
-        if v then
-            Conns.Noclip = RunService.Stepped:Connect(ApplyNoclip)
+    Name = "👀 หนีคนอัตโนมัติ",
+    Callback = function(v)
+        EvadeToggle = v
+        if not v and IsEvading and AnchorCF then
+            Teleport(AnchorCF)
+            if ReturnEnabled then
+                StartReturnLock()
+            end
+            IsEvading = false
+            AnchorCF = nil
         end
     end
 })
@@ -254,15 +354,11 @@ Tab:CreateToggle({
 Tab:CreateToggle({
     Name="กันเคลื่อนที่",
     Callback=function(v)
-        ReturnPos=v
-        if Conns.Return then Conns.Return:Disconnect() end
+        ReturnEnabled = v
         if v then
-            ReturnCF = HRP().CFrame
-            Conns.Return = RunService.Heartbeat:Connect(function()
-                if (HRP().Position-ReturnCF.Position).Magnitude > MaxDist then
-                    HRP().CFrame = ReturnCF
-                end
-            end)
+            StartReturnLock()
+        else
+            StopReturnLock()
         end
     end
 })
@@ -273,7 +369,9 @@ Tab:CreateSlider({
     Increment=1,
     Suffix="stud",
     CurrentValue=5,
-    Callback=function(v) MaxDist=v end
+    Callback=function(v)
+        MaxDist = v
+    end
 })
 
 --====================================
@@ -282,16 +380,58 @@ Tab:CreateSlider({
 local TeleportTab = Window:CreateTab("วาป", 4483362458)
 
 TeleportTab:CreateButton({
-    Name = "📍 วาปตำแหน่งที่ 1",
+    Name = "📍 จุดฟามที่ 1",
     Callback = function()
         HRP().CFrame = CFrame.new(-1348, 696, -1027)
     end
 })
 
 TeleportTab:CreateButton({
-    Name = "📍 วาปตำแหน่งที่ 2",
+    Name = "📍 จุดฟามที่ 2",
     Callback = function()
         HRP().CFrame = CFrame.new(1395, 733, -693)
+    end
+})
+
+TeleportTab:CreateButton({
+    Name = "📍 บอสมาโคร์",
+    Callback = function()
+        HRP().CFrame = CFrame.new(-1081, 950, 503) -- ✏️ แก้พิกัดตรงนี้
+    end
+})
+
+TeleportTab:CreateButton({
+    Name = "📍 เซฟโซนบอสมาโคร",
+    Callback = function()
+        HRP().CFrame = CFrame.new(-417, 745, 380) -- ✏️ แก้พิกัดตรงนี้
+    end
+})
+
+TeleportTab:CreateButton({
+    Name = "📍 เซฟโซนดัมมี่",
+    Callback = function()
+        HRP().CFrame = CFrame.new(-922, 784, -825) -- ✏️ แก้พิกัดตรงนี้
+    end
+})
+
+TeleportTab:CreateButton({
+    Name = "📍 เซฟโซนน้ำพลุ",
+    Callback = function()
+        HRP().CFrame = CFrame.new(404, 737, -677) -- ✏️ แก้พิกัดตรงนี้
+    end
+})
+
+TeleportTab:CreateButton({
+    Name = "📍 เซฟโซนโคโลเซียม",
+    Callback = function()
+        HRP().CFrame = CFrame.new(626, 737, 362) -- ✏️ แก้พิกัดตรงนี้
+    end
+})
+
+TeleportTab:CreateButton({
+    Name = "📍 เซฟโซนสะพาน",
+    Callback = function()
+        HRP().CFrame = CFrame.new(919, 737, 1179) -- ✏️ แก้พิกัดตรงนี้
     end
 })
 
@@ -379,6 +519,52 @@ TeleportTab:CreateButton({
                 task.wait()
             end
         end)
+    end
+})
+
+--====================================
+-- TOGGLE : HOLD Q → AUTO SORU
+--====================================
+local UIS = game:GetService("UserInputService")
+local RepNoYield = game:GetService("ReplicatedStorage"):WaitForChild("ReplicatorNoYield")
+
+local HoldQSoru = false
+local HoldingQ = false
+local SoruDelay = 0 -- ปรับความรัวได้
+
+-- ฟังปุ่ม Q
+UIS.InputBegan:Connect(function(input, gpe)
+    if gpe then return end
+    if input.KeyCode == Enum.KeyCode.Q and HoldQSoru then
+        HoldingQ = true
+    end
+end)
+
+UIS.InputEnded:Connect(function(input)
+    if input.KeyCode == Enum.KeyCode.Q then
+        HoldingQ = false
+    end
+end)
+
+-- Loop รัว
+task.spawn(function()
+    while true do
+        if HoldQSoru and HoldingQ then
+            RepNoYield:FireServer("Core","Soru",{})
+        end
+        task.wait(SoruDelay)
+    end
+end)
+
+-- Toggle ใน UI
+TeleportTab:CreateToggle({
+    Name = "⚡ Soruในคอม (Q)",
+    CurrentValue = false,
+    Callback = function(v)
+        HoldQSoru = v
+        if not v then
+            HoldingQ = false
+        end
     end
 })
 
