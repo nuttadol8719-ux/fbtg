@@ -84,6 +84,8 @@ local BlacklistRemote = {
     ["Core | Soru"] = true,
     ["Core | GetInputData"] = true,
     ["ServerManager | GetServers"] = true,
+    ["Core | Block"] = true,
+    ["Core | M1"] = true,
 }
 
 if not _G.FB_ALL_HOOK then
