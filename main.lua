@@ -462,10 +462,118 @@ TeleportTab:CreateButton({
     end
 })
 
---====================================
--- ✅ SORU UI (กดปุ่มในแท็บวาปเพื่อรัน)
---====================================
-TeleportTab:CreateButton({
+
+
+local pvpTab = Window:CreateTab("pvp", 4483362458)
+
+-- ===============================
+-- PLAYER ESP + HP NUMBER + DISTANCE
+-- ===============================
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Camera = workspace.CurrentCamera
+local LocalPlayer = Players.LocalPlayer
+
+local ESP_ENABLED = false
+local ESP = {}
+
+local function createESP(player)
+    if player == LocalPlayer then return end
+
+    local box = Drawing.new("Square")
+    box.Thickness = 2
+    box.Color = Color3.fromRGB(255, 0, 0)
+    box.Filled = false
+    box.Visible = false
+
+    local text = Drawing.new("Text")
+    text.Size = 13
+    text.Center = true
+    text.Outline = true
+    text.Color = Color3.fromRGB(255,255,255)
+    text.Visible = false
+
+    ESP[player] = {
+        box = box,
+        text = text
+    }
+end
+
+local function removeESP(player)
+    if ESP[player] then
+        for _,v in pairs(ESP[player]) do
+            v:Remove()
+        end
+        ESP[player] = nil
+    end
+end
+
+for _,p in pairs(Players:GetPlayers()) do
+    createESP(p)
+end
+Players.PlayerAdded:Connect(createESP)
+Players.PlayerRemoving:Connect(removeESP)
+
+RunService.RenderStepped:Connect(function()
+    for player,esp in pairs(ESP) do
+        local char = player.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        local hum = char and char:FindFirstChild("Humanoid")
+
+        if ESP_ENABLED and hrp and hum and hum.Health > 0 then
+            local pos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
+            if onScreen then
+                local distance = (Camera.CFrame.Position - hrp.Position).Magnitude
+                local size = math.clamp(3000 / distance, 6, 200)
+                local boxH = size * 1.5
+
+                -- Box
+                esp.box.Size = Vector2.new(size, boxH)
+                esp.box.Position = Vector2.new(pos.X - size/2, pos.Y - boxH/2)
+                esp.box.Visible = true
+
+                -- Text (Name + HP + Distance)
+                esp.text.Text = string.format(
+                    "%s | HP: %d/%d | %dm",
+                    player.Name,
+                    math.floor(hum.Health),
+                    math.floor(hum.MaxHealth),
+                    math.floor(distance)
+                )
+
+                esp.text.Position = Vector2.new(pos.X, pos.Y - boxH/2 - 14)
+                esp.text.Visible = true
+            else
+                for _,v in pairs(esp) do v.Visible = false end
+            end
+        else
+            for _,v in pairs(esp) do v.Visible = false end
+        end
+    end
+end)
+
+-- ===============================
+-- TOGGLE (pvpTab)
+-- ===============================
+pvpTab:CreateToggle({
+    Name = "ESP",
+    CurrentValue = false,
+    Callback = function(Value)
+        ESP_ENABLED = Value
+        if not Value then
+            for _,esp in pairs(ESP) do
+                for _,v in pairs(esp) do
+                    v.Visible = false
+                end
+            end
+        end
+    end
+})
+
+
+
+pvpTab:CreateButton({
     Name = "⚡ เปิด SORU (ลาก + กดค้าง)",
     Callback = function()
 
@@ -549,9 +657,6 @@ TeleportTab:CreateButton({
     end
 })
 
---====================================
--- TOGGLE : HOLD Q → AUTO SORU
---====================================
 local UIS = game:GetService("UserInputService")
 local RepNoYield = game:GetService("ReplicatedStorage"):WaitForChild("ReplicatorNoYield")
 
@@ -584,7 +689,7 @@ task.spawn(function()
 end)
 
 -- Toggle ใน UI
-TeleportTab:CreateToggle({
+pvpTab:CreateToggle({
     Name = "⚡ Soruในคอม (Q)",
     CurrentValue = false,
     Callback = function(v)
