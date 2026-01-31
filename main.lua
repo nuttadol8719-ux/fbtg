@@ -109,6 +109,8 @@ local BlacklistRemote = {
     ["ServerManager | GetServers"] = true,
     ["Core | Block"] = true,
     ["Core | M1"] = true,
+    ["ClientData | ClearData"] = true,
+    ["ClientData | UpdateData"] = true,
 }
 
 if not _G.FB_ALL_HOOK then
