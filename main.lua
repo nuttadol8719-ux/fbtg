@@ -7,7 +7,7 @@
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
 
 local Window = Rayfield:CreateWindow({
-    Name = "fruits battleground update1.35(pvp🔥)",
+    Name = "fruits battleground update1.30",
     LoadingTitle = "update",
     LoadingSubtitle = "by pond",
     ConfigurationSaving = {
@@ -50,6 +50,64 @@ local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local VirtualUser = game:GetService("VirtualUser")
 local UIS = game:GetService("UserInputService")
+
+--====================================
+-- 🔒 AUTO ANTI-AFK (ALWAYS ON)
+--====================================
+
+local VirtualInputManager = game:GetService("VirtualInputManager")
+local lp = game:GetService("Players").LocalPlayer
+
+local function GetHumanoid()
+    local ch = lp.Character or lp.CharacterAdded:Wait()
+    return ch:WaitForChild("Humanoid")
+end
+
+-- 1) VirtualUser (หลัก)
+lp.Idled:Connect(function()
+    pcall(function()
+        VirtualUser:CaptureController()
+        VirtualUser:ClickButton2(Vector2.new())
+    end)
+end)
+
+-- 2) ขยับตัวละครเล็กน้อย
+task.spawn(function()
+    while true do
+        task.wait(30)
+        local hum = GetHumanoid()
+        if hum and hum.Health > 0 then
+            hum:Move(Vector3.new(0,0,-1), true)
+            task.wait(0.15)
+            hum:Move(Vector3.new(0,0,1), true)
+        end
+    end
+end)
+
+-- 3) Jump เป็นช่วง ๆ
+task.spawn(function()
+    while true do
+        task.wait(60)
+        local hum = GetHumanoid()
+        if hum then
+            hum.Jump = true
+        end
+    end
+end)
+
+-- 4) Fake Input (W)
+task.spawn(function()
+    while true do
+        task.wait(20)
+        pcall(function()
+            VirtualInputManager:SendKeyEvent(true,"W",false,game)
+            task.wait(0.15)
+            VirtualInputManager:SendKeyEvent(false,"W",false,game)
+        end)
+    end
+end)
+
+print("✅ AUTO ANTI-AFK : RUNNING")
 
 local lp = Players.LocalPlayer
 local Replicator = ReplicatedStorage:WaitForChild("Replicator")
@@ -219,26 +277,6 @@ Tab:CreateToggle({
 })
 
 --====================================
--- ANTI IDLE
---====================================
-Tab:CreateToggle({
-    Name = "🛡️ กันหลุดAFK",
-    Callback = function(v)
-        AntiIdle20 = v
-        if IdleThread then task.cancel(IdleThread) end
-        if v then
-            IdleThread = task.spawn(function()
-                while AntiIdle20 do
-                    task.wait(600)
-                    VirtualUser:CaptureController()
-                    VirtualUser:ClickButton2(Vector2.new())
-                end
-            end)
-        end
-    end
-})
-
---====================================
 -- AUTO SPIN
 --====================================
 Tab:CreateToggle({
@@ -248,7 +286,7 @@ Tab:CreateToggle({
         if v then
             task.spawn(function()
                 while AutoSpin do
-                    Replicator:InvokeServer("FruitsHandler","Spin",{})
+                    Replicator:InvokeServer("FruitsHandler","Spi",{})
                     task.wait(SpinDelay)
                 end
             end)
