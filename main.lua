@@ -52,14 +52,12 @@ local VirtualUser = game:GetService("VirtualUser")
 local UIS = game:GetService("UserInputService")
 
 --====================================
--- 🔒 AUTO ANTI-AFK (NO MOVE)
--- ทำงานทันที / ไม่ขยับตัวละคร
+-- 🔒 AUTO ANTI-AFK (NO MOVE / NO INPUT)
+-- ทำงานอัตโนมัติเมื่อรัน
 --====================================
 
-local VirtualInputManager = game:GetService("VirtualInputManager")
 local lp = game:GetService("Players").LocalPlayer
 
--- 1) VirtualUser (หลักสุด / ไม่ขยับตัว)
 lp.Idled:Connect(function()
     pcall(function()
         VirtualUser:CaptureController()
@@ -67,20 +65,8 @@ lp.Idled:Connect(function()
     end)
 end)
 
--- 2) Fake Input เบา ๆ (ไม่ทำให้เดินจริง)
-task.spawn(function()
-    while true do
-        task.wait(25)
-        pcall(function()
-            -- กดแล้วปล่อยไวมาก ตัวละครไม่ทันขยับ
-            VirtualInputManager:SendKeyEvent(true,"W",false,game)
-            task.wait(0.05)
-            VirtualInputManager:SendKeyEvent(false,"W",false,game)
-        end)
-    end
-end)
+print("✅ AUTO ANTI-AFK : VIRTUALUSER ONLY")
 
-print("✅ AUTO ANTI-AFK (NO MOVE) : RUNNING")
 
 
 local lp = Players.LocalPlayer
