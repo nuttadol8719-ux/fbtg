@@ -52,18 +52,14 @@ local VirtualUser = game:GetService("VirtualUser")
 local UIS = game:GetService("UserInputService")
 
 --====================================
--- 🔒 AUTO ANTI-AFK (ALWAYS ON)
+-- 🔒 AUTO ANTI-AFK (NO MOVE)
+-- ทำงานทันที / ไม่ขยับตัวละคร
 --====================================
 
 local VirtualInputManager = game:GetService("VirtualInputManager")
 local lp = game:GetService("Players").LocalPlayer
 
-local function GetHumanoid()
-    local ch = lp.Character or lp.CharacterAdded:Wait()
-    return ch:WaitForChild("Humanoid")
-end
-
--- 1) VirtualUser (หลัก)
+-- 1) VirtualUser (หลักสุด / ไม่ขยับตัว)
 lp.Idled:Connect(function()
     pcall(function()
         VirtualUser:CaptureController()
@@ -71,43 +67,21 @@ lp.Idled:Connect(function()
     end)
 end)
 
--- 2) ขยับตัวละครเล็กน้อย
+-- 2) Fake Input เบา ๆ (ไม่ทำให้เดินจริง)
 task.spawn(function()
     while true do
-        task.wait(30)
-        local hum = GetHumanoid()
-        if hum and hum.Health > 0 then
-            hum:Move(Vector3.new(0,0,-1), true)
-            task.wait(0.15)
-            hum:Move(Vector3.new(0,0,1), true)
-        end
-    end
-end)
-
--- 3) Jump เป็นช่วง ๆ
-task.spawn(function()
-    while true do
-        task.wait(60)
-        local hum = GetHumanoid()
-        if hum then
-            hum.Jump = true
-        end
-    end
-end)
-
--- 4) Fake Input (W)
-task.spawn(function()
-    while true do
-        task.wait(20)
+        task.wait(25)
         pcall(function()
+            -- กดแล้วปล่อยไวมาก ตัวละครไม่ทันขยับ
             VirtualInputManager:SendKeyEvent(true,"W",false,game)
-            task.wait(0.15)
+            task.wait(0.05)
             VirtualInputManager:SendKeyEvent(false,"W",false,game)
         end)
     end
 end)
 
-print("✅ AUTO ANTI-AFK : RUNNING")
+print("✅ AUTO ANTI-AFK (NO MOVE) : RUNNING")
+
 
 local lp = Players.LocalPlayer
 local Replicator = ReplicatedStorage:WaitForChild("Replicator")
