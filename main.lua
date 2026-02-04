@@ -7,7 +7,7 @@
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
 
 local Window = Rayfield:CreateWindow({
-    Name = "fruits battleground update1.4(pvp🔥)",
+    Name = "fruits battleground update1.5(aimbot🔥)",
      LoadingTitle = "update",
     LoadingSubtitle = "by pond",
     ConfigurationSaving = {
@@ -569,7 +569,344 @@ pvpTab:CreateToggle({
     end
 })
 
+--====================================
+-- 🎯 AIMLOCK PRO FULL (DELTA READY)
+-- FOV + WALLCHECK + IGNORE MENU DRAG + TOGGLE
+--====================================
 
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Camera = workspace.CurrentCamera
+local UIS = game:GetService("UserInputService")
+local lp = Players.LocalPlayer
+
+--=============================
+-- SETTINGS
+--=============================
+local AimlockEnabled = false
+local AimFOV = 150
+local AimTarget = nil
+
+--=============================
+-- 🚫 IGNORE BLACKLIST
+--=============================
+local Blacklist = {}
+
+local function IsBlacklisted(plr)
+    return Blacklist[plr.Name] == true
+end
+
+--=============================
+-- 🔥 WALL CHECK
+--=============================
+local function CanSeeTarget(targetHRP)
+    local origin = Camera.CFrame.Position
+    local direction = (targetHRP.Position - origin)
+
+    local params = RaycastParams.new()
+    params.FilterType = Enum.RaycastFilterType.Blacklist
+    params.FilterDescendantsInstances = {lp.Character}
+
+    local result = workspace:Raycast(origin, direction, params)
+
+    if result then
+        return result.Instance:IsDescendantOf(targetHRP.Parent)
+    end
+
+    return false
+end
+
+--=============================
+-- ⭕ FOV CIRCLE + OFFSET FIX (NO MODE ERROR)
+--=============================
+
+local gui = Instance.new("ScreenGui")
+gui.Name = "FOVCircleUI"
+gui.ResetOnSpawn = false
+gui.Parent = lp:WaitForChild("PlayerGui")
+
+local circle = Instance.new("Frame")
+circle.Size = UDim2.fromOffset(AimFOV * 2, AimFOV * 2)
+circle.AnchorPoint = Vector2.new(0.5, 0.5)
+circle.BackgroundTransparency = 1
+circle.Visible = false
+circle.Parent = gui
+
+local stroke = Instance.new("UIStroke")
+stroke.Thickness = 2
+stroke.Parent = circle
+
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(1, 0)
+corner.Parent = circle
+
+--=============================
+-- 🎯 OFFSET FIXED
+--=============================
+
+local OffsetX = 0
+local OffsetY = -55 -- ✅ ตรงทั้งมือถือ + คอมของมึง
+
+-- Update Size
+local function UpdateCircle()
+    circle.Size = UDim2.fromOffset(AimFOV * 2, AimFOV * 2)
+end
+
+-- Update Position Always
+RunService.RenderStepped:Connect(function()
+    circle.Position = UDim2.fromOffset(
+        (Camera.ViewportSize.X / 2) + OffsetX,
+        (Camera.ViewportSize.Y / 2) + OffsetY
+    )
+end)
+
+--=============================
+-- ✅ UI CONTROLS
+--=============================
+
+pvpTab:CreateToggle({
+    Name = "⭕ Show FOV Circle",
+    CurrentValue = false,
+    Callback = function(v)
+        circle.Visible = v
+    end
+})
+
+pvpTab:CreateSlider({
+    Name = "📌 FOV Size",
+    Range = {50, 500},
+    Increment = 10,
+    CurrentValue = AimFOV,
+    Callback = function(v)
+        AimFOV = v
+        UpdateCircle()
+    end
+})
+
+pvpTab:CreateSlider({
+    Name = "⬅ Offset X",
+    Range = {-200, 200},
+    Increment = 5,
+    CurrentValue = OffsetX,
+    Callback = function(v)
+        OffsetX = v
+    end
+})
+
+pvpTab:CreateSlider({
+    Name = "⬆ Offset Y",
+    Range = {-200, 200},
+    Increment = 5,
+    CurrentValue = OffsetY,
+    Callback = function(v)
+        OffsetY = v
+    end
+})
+
+
+
+--=============================
+-- 🎯 FIND TARGET
+--=============================
+local function GetClosestTarget()
+    local closest = nil
+    local shortest = math.huge
+
+    for _,plr in pairs(Players:GetPlayers()) do
+        if plr ~= lp and not IsBlacklisted(plr) then
+            local char = plr.Character
+            local hrp = char and char:FindFirstChild("HumanoidRootPart")
+            local hum = char and char:FindFirstChild("Humanoid")
+
+            if hrp and hum and hum.Health > 0 then
+                local pos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
+
+                if onScreen then
+                    local dist =
+                        (Vector2.new(pos.X, pos.Y) -
+                        Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)).Magnitude
+
+                    if dist < AimFOV and dist < shortest then
+                        if CanSeeTarget(hrp) then
+                            shortest = dist
+                            closest = hrp
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    return closest
+end
+
+--=============================
+-- 🔥 AIMLOCK LOOP
+--=============================
+RunService.RenderStepped:Connect(function()
+    if not AimlockEnabled then return end
+
+    AimTarget = GetClosestTarget()
+
+    if AimTarget then
+        Camera.CFrame = CFrame.new(
+            Camera.CFrame.Position,
+            AimTarget.Position
+        )
+    end
+end)
+
+--=============================
+-- 🚫 IGNORE MENU (DRAG + IGNORE/UNIGNORE)
+--=============================
+local IgnoreUI = nil
+
+local function OpenIgnoreMenu()
+    if IgnoreUI then IgnoreUI:Destroy() end
+
+    IgnoreUI = Instance.new("ScreenGui")
+    IgnoreUI.Name = "IgnoreMenuUI"
+    IgnoreUI.ResetOnSpawn = false
+    IgnoreUI.Parent = lp.PlayerGui
+
+    local frame = Instance.new("Frame", IgnoreUI)
+    frame.Size = UDim2.fromOffset(260, 320)
+    frame.Position = UDim2.fromScale(0.5, 0.5)
+    frame.AnchorPoint = Vector2.new(0.5, 0.5)
+    frame.BackgroundColor3 = Color3.fromRGB(25,25,25)
+    frame.Active = true
+
+    Instance.new("UICorner", frame).CornerRadius = UDim.new(0,12)
+
+    -- DRAG BAR
+    local dragBar = Instance.new("Frame", frame)
+    dragBar.Size = UDim2.new(1,0,0,35)
+    dragBar.BackgroundColor3 = Color3.fromRGB(35,35,35)
+    dragBar.Active = true
+    Instance.new("UICorner", dragBar).CornerRadius = UDim.new(0,12)
+
+    local title = Instance.new("TextLabel", dragBar)
+    title.Size = UDim2.new(1,0,1,0)
+    title.BackgroundTransparency = 1
+    title.Text = "🚫 Select Player"
+    title.TextColor3 = Color3.fromRGB(255,255,255)
+    title.Font = Enum.Font.GothamBold
+    title.TextScaled = true
+
+    -- DRAG SYSTEM
+    local dragging, dragStart, startPos = false, nil, nil
+
+    dragBar.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = frame.Position
+        end
+    end)
+
+    dragBar.InputEnded:Connect(function()
+        dragging = false
+    end)
+
+    UIS.InputChanged:Connect(function(input)
+        if dragging then
+            local delta = input.Position - dragStart
+            frame.Position = UDim2.new(
+                startPos.X.Scale,
+                startPos.X.Offset + delta.X,
+                startPos.Y.Scale,
+                startPos.Y.Offset + delta.Y
+            )
+        end
+    end)
+
+    -- SCROLL LIST
+    local scroll = Instance.new("ScrollingFrame", frame)
+    scroll.Size = UDim2.new(1,-20,1,-90)
+    scroll.Position = UDim2.new(0,10,0,45)
+    scroll.BackgroundTransparency = 1
+    scroll.ScrollBarThickness = 6
+
+    local layout = Instance.new("UIListLayout", scroll)
+    layout.Padding = UDim.new(0,6)
+
+    -- CLOSE BUTTON
+    local close = Instance.new("TextButton", frame)
+    close.Size = UDim2.new(1,-20,0,35)
+    close.Position = UDim2.new(0,10,1,-40)
+    close.Text = "❌ Close"
+    close.Font = Enum.Font.GothamBold
+    close.TextScaled = true
+    close.BackgroundColor3 = Color3.fromRGB(50,50,50)
+    close.TextColor3 = Color3.fromRGB(255,255,255)
+    Instance.new("UICorner", close).CornerRadius = UDim.new(0,10)
+
+    close.MouseButton1Click:Connect(function()
+        IgnoreUI:Destroy()
+        IgnoreUI = nil
+    end)
+
+    -- PLAYER BUTTONS
+    local count = 0
+
+    for _,plr in pairs(Players:GetPlayers()) do
+        if plr ~= lp then
+            count += 1
+
+            local btn = Instance.new("TextButton", scroll)
+            btn.Size = UDim2.new(1,0,0,35)
+            btn.Font = Enum.Font.GothamBold
+            btn.TextScaled = true
+            btn.TextColor3 = Color3.fromRGB(255,255,255)
+
+            Instance.new("UICorner", btn).CornerRadius = UDim.new(0,8)
+
+            local function UpdateButton()
+                if IsBlacklisted(plr) then
+                    btn.Text = plr.Name .. " ✅ Ignored"
+                    btn.BackgroundColor3 = Color3.fromRGB(70,20,20)
+                else
+                    btn.Text = plr.Name
+                    btn.BackgroundColor3 = Color3.fromRGB(40,40,40)
+                end
+            end
+
+            UpdateButton()
+
+            btn.MouseButton1Click:Connect(function()
+                if IsBlacklisted(plr) then
+                    Blacklist[plr.Name] = nil
+                else
+                    Blacklist[plr.Name] = true
+                end
+                UpdateButton()
+            end)
+        end
+    end
+
+    scroll.CanvasSize = UDim2.new(0,0,0,count*45)
+end
+
+--=============================
+-- UI BUTTONS (Rayfield)
+--=============================
+
+pvpTab:CreateToggle({
+    Name = "🎯 ล็อกเป้า",
+    CurrentValue = false,
+    Callback = function(v)
+        AimlockEnabled = v
+        if not v then AimTarget = nil end
+    end
+})
+
+pvpTab:CreateButton({
+    Name = "🚫 ไม่ล็อก",
+    Callback = function()
+        OpenIgnoreMenu()
+    end
+})
 
 pvpTab:CreateButton({
     Name = "⚡ เปิด SORU (ลาก + กดค้าง)",
