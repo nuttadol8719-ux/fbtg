@@ -462,7 +462,7 @@ TeleportTab:CreateButton({
 
 
 
-local pvpTab = Window:CreateTab"pvp", 4483362458)
+local pvpTab = Window:CreateTab("pvp", 4483362458)
 
 -- ===============================
 -- PLAYER ESP + HP NUMBER + DISTANCE
@@ -555,7 +555,7 @@ end)
 -- TOGGLE (pvpTab)
 -- ===============================
 pvpTab:CreateToggle({
-    Name = "มองเห็น",
+    Name = "ESP",
     CurrentValue = false,
     Callback = function(Value)
         ESP_ENABLED = Value
@@ -665,7 +665,7 @@ end)
 --=============================
 
 pvpTab:CreateToggle({
-    Name = "⭕ โชว์วงล็อก",
+    Name = "⭕ Show FOV Circle",
     CurrentValue = false,
     Callback = function(v)
         circle.Visible = v
@@ -673,7 +673,7 @@ pvpTab:CreateToggle({
 })
 
 pvpTab:CreateSlider({
-    Name = "📌 ขนาดวง",
+    Name = "📌 FOV Size",
     Range = {50, 500},
     Increment = 10,
     CurrentValue = AimFOV,
@@ -684,7 +684,7 @@ pvpTab:CreateSlider({
 })
 
 pvpTab:CreateSlider({
-    Name = "⬅ ปรับตำแหน่งวง X",
+    Name = "⬅ Offset X",
     Range = {-200, 200},
     Increment = 5,
     CurrentValue = OffsetX,
@@ -694,7 +694,7 @@ pvpTab:CreateSlider({
 })
 
 pvpTab:CreateSlider({
-    Name = "⬆ ปรับตำแหน่งวง Y",
+    Name = "⬆ Offset Y",
     Range = {-200, 200},
     Increment = 5,
     CurrentValue = OffsetY,
